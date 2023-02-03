@@ -40,8 +40,7 @@ import xarray as xr
 import yaml
 
 REFTIME = dt.datetime(1993,1,1)
-NLEV = 35
-SUPPORTED_RETRIEVAL_TYPES = ['OMNO2_003','MINDS']
+SUPPORTED_RETRIEVAL_TYPES = ['OMNO2_003','MINDS','OMPS']
 
 def main(args):
     '''
@@ -99,6 +98,22 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
     row1d  = []
     data_dict = {}
     for f in sorted(ifiles):
+        # first extract number of layers and rows from file 
+        ds = xr.open_dataset(f)
+        levName = 'unknown'
+        rowName = 'unknown'
+        if rtype=='OMNO2_003':
+            levName = 'phony_dim_2'
+            rowName = 'phony_dim_5'
+        if rtype=='MINDS':
+            levName = 'nLevels'
+            rowName = 'nXtrack'
+        if rtype=='OMPS':
+            levName = 'nLayers'
+            rowName = 'nXtrack'
+        nlevs = ds.dims[levName]
+        nrows = ds.dims[rowName]
+        ds.close()
         # read geo data first to extract time and row data, plus any additional variables as listed in the configuration file.
         # The time and row dimension (dims 1 and 2) are collapsed to one row, using Fortran order.
         config_geo = config.get('data').get('geo')
@@ -108,11 +123,11 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         time_long_name = 'unknown'
         if rtype=='OMNO2_003':
             time_long_name = geo.Time.Title
-        if rtype=='MINDS':
+        if rtype=='MINDS' or rtype=='OMPS':
             time_long_name = geo.Time.description
         assert('TAI93' in time_long_name)
         # get timestamps
-        if rtype=='MINDS':
+        if rtype=='MINDS' or rtype=='OMPS':
             time_values = (geo.Time.values-tref)/np.timedelta64(1,'s')
             if np.ndim(time_values)==2:
                time_values = np.nanmean(time_values,axis=1)
@@ -128,12 +143,6 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         # get index of time stamps to be used 
         idx = (time_values>=mint)&(time_values<maxt)
         ntimes = np.sum(idx)
-        rowName = 'unknown'
-        if rtype=='OMNO2_003':
-            rowName = 'phony_dim_5'
-        if rtype=='MINDS':
-            rowName = 'nXtrack'
-        nrows = geo.dims[rowName]
         # create time and row data arrays and append to corresponding lists
         #time1d.append(np.tile(geo['Time'].values[idx],nrows))
         time1d.append(np.tile(time_values[idx],nrows))
@@ -141,7 +150,7 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         # get all other geodata. 
         group_vars = config_geo.get('vars')
         for v in group_vars: 
-            data_dict = _read_data(args,geo,v,data_dict,idx,ntimes,nrows)
+            data_dict = _read_data(args,geo,v,data_dict,idx,ntimes,nrows,nlevs)
         geo.close()
         # read all other data groups
         for igroup in config.get('data'):
@@ -155,7 +164,7 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
             # read all data as above 
             group_vars = config_group.get('vars')
             for v in group_vars: 
-                data_dict = _read_data(args,ds,v,data_dict,idx,ntimes,nrows)
+                data_dict = _read_data(args,ds,v,data_dict,idx,ntimes,nrows,nlevs)
             ds.close()
         # count number of records
         nrec += ntimes*nrows
@@ -211,7 +220,7 @@ def _read_config(configfile):
     return config
 
 
-def _read_data(args,ds,varname,data_dict,idx,ntimes,nrows):
+def _read_data(args,ds,varname,data_dict,idx,ntimes,nrows,nlevs):
     '''
     Read data array from input dataset and store it in the local data dictionary.
     Data is reordered with the time and row axes collapsed into one, using Fortran ordering.
@@ -243,7 +252,7 @@ def _read_data(args,ds,varname,data_dict,idx,ntimes,nrows):
             iarr = np.tile(ds[varname].values[idx],nrows)
             dims = ["nrec"]
         # 1d: [levels,] -> [levels,]
-        if ds[varname].shape[0]==NLEV:
+        if ds[varname].shape[0]==nlevs:
             iarr = ds[varname].values[:]
             dims = ["nlev"]
     # if variable is not yet in data list dictionary, add item to it. Also store data units and long name
