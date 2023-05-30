@@ -77,6 +77,7 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
     t2 = idate + dt.timedelta(hours=hour+dh)
     tai_t1 = (t1-REFTIME).total_seconds()
     tai_t2 = (t2-REFTIME).total_seconds()
+    tref   = np.datetime64('1993-01-01T00:00:00Z')
     # get all input files
     file_template = config.get('file_template','unknown')
     itemplate = odate.strftime(file_template) 
@@ -112,13 +113,13 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         assert('TAI93' in time_long_name)
         # get timestamps
         if rtype=='MINDS':
-            time_values = pd.to_datetime(geo.Time.values)
-            mint = t1            
-            maxt = t2
+            time_values = (geo.Time.values-tref)/np.timedelta64(1,'s')
+            if np.ndim(time_values)==2:
+               time_values = np.nanmean(time_values,axis=1)
         if rtype=='OMNO2_003':
             time_values = geo.Time.values
-            mint = tai_t1
-            maxt = tai_t2
+        mint = tai_t1
+        maxt = tai_t2
         # go to next file if all observations outside of desired time window
         if (time_values.min()>maxt) or (time_values.max()<mint):
             #log.info('Skip because all data outside of time range')
@@ -159,14 +160,13 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         # count number of records
         nrec += ntimes*nrows
 #---Write all data to netCDF file
+    if nrec==0:
+        log.warning(idate.strftime('No valid data found for %Y-%m-%d: {}'.format(itemplate)))
+        return
     data_vars = {}
     # Create entries for row and time stamps
     timvec = np.concatenate(tuple(time1d),axis=0)
-    if rtype=='OMNO2_003':
-        times = [REFTIME+dt.timedelta(seconds=i) for i in timvec]
-    if rtype=='MINDS':
-        times = pd.to_datetime(timvec)
-        #times = [i for i in timvec]
+    times = [REFTIME+dt.timedelta(seconds=i) for i in timvec]
     data_vars['Year'] = (["nrec"], np.array([np.float(i.year) for i in times]), {"long_name":"Year at start of scan","unit":"1"})
     data_vars['Month'] = (["nrec"], np.array([np.float(i.month) for i in times]), {"long_name":"Month at start of scan","unit":"1"})
     data_vars['Day'] = (["nrec"], np.array([np.float(i.day) for i in times]), {"long_name":"Day at start of scan","unit":"1"})
@@ -274,10 +274,11 @@ def _create_var(dict_entry):
     if dict_entry['dims']==["nlev"]:
         datalist = [dict_entry['data_list'][0]]
     else:
-        if len(dict_entry['data_list'])>1:
-            datalist = dict_entry['data_list'][:]
-        else:
-            datalist = [dict_entry['data_list'][:]]
+        datalist = dict_entry['data_list'][:]
+#        if len(dict_entry['data_list'])>1:
+#            datalist = dict_entry['data_list'][:]
+#        else:
+#            datalist = [dict_entry['data_list'][:]]
     idict = {}
     for key,value in dict_entry.items():
         if key not in ['dims','data_list']:
