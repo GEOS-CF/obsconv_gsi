@@ -40,7 +40,7 @@ import xarray as xr
 import yaml
 
 REFTIME = dt.datetime(1993,1,1)
-SUPPORTED_RETRIEVAL_TYPES = ['OMNO2_003','MINDS','OMPS']
+SUPPORTED_RETRIEVAL_TYPES = ['OMNO2_003','MINDS','OMPS','TEMPO']
 
 def main(args):
     '''
@@ -111,9 +111,14 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         if rtype=='OMPS':
             levName = 'nLayers'
             rowName = 'nXtrack'
-        nlevs = ds.dims[levName]
+        if rtype=='TEMPO':
+            rowName = 'xtrack'
         nrows = ds.dims[rowName]
+        nlevs = 47 if rtype=='TEMPO' else ds.dims[levName]
         ds.close()
+        if nrows==0:
+           log.info(' -- Number of rows in data are zero!') 
+           continue
         # read geo data first to extract time and row data, plus any additional variables as listed in the configuration file.
         # The time and row dimension (dims 1 and 2) are collapsed to one row, using Fortran order.
         config_geo = config.get('data').get('geo')
@@ -125,7 +130,9 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
             time_long_name = geo.Time.Title
         if rtype=='MINDS' or rtype=='OMPS':
             time_long_name = geo.Time.description
-        assert('TAI93' in time_long_name)
+        if rtype=='TEMPO':
+            time_long_name = geo.time.long_name 
+        #assert('TAI93' in time_long_name)
         # get timestamps
         if rtype=='MINDS' or rtype=='OMPS':
             time_values = (geo.Time.values-tref)/np.timedelta64(1,'s')
@@ -133,6 +140,10 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
                time_values = np.nanmean(time_values,axis=1)
         if rtype=='OMNO2_003':
             time_values = geo.Time.values
+        if rtype=='TEMPO':
+            tref_tempo = np.datetime64('2000-01-01T12:00:00Z') 
+            time_values = (geo.time.values-tref_tempo)/np.timedelta64(1,'s')
+            time_values = time_values + ((tref_tempo-tref)/np.timedelta64(1,'s')) 
         mint = tai_t1
         maxt = tai_t2
         # go to next file if all observations outside of desired time window
@@ -143,6 +154,9 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
         # get index of time stamps to be used 
         idx = (time_values>=mint)&(time_values<maxt)
         ntimes = np.sum(idx)
+        if ntimes==0:
+           log.info(' -- No valid times found, this should have been flagged earlier...')
+           continue
         # create time and row data arrays and append to corresponding lists
         #time1d.append(np.tile(geo['Time'].values[idx],nrows))
         time1d.append(np.tile(time_values[idx],nrows))
@@ -176,7 +190,9 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
     # Create entries for row and time stamps
     timvec = np.concatenate(tuple(time1d),axis=0)
     times = [REFTIME+dt.timedelta(seconds=i) for i in timvec]
-    data_vars['Year'] = (["nrec"], np.array([np.float(i.year) for i in times]), {"long_name":"Year at start of scan","unit":"1"})
+    # hack for tempo: set timestamp to 2021
+    offy = 8. if rtype=='TEMPO' else 0.
+    data_vars['Year'] = (["nrec"], np.array([np.float(i.year)+offy for i in times]), {"long_name":"Year at start of scan","unit":"1"})
     data_vars['Month'] = (["nrec"], np.array([np.float(i.month) for i in times]), {"long_name":"Month at start of scan","unit":"1"})
     data_vars['Day'] = (["nrec"], np.array([np.float(i.day) for i in times]), {"long_name":"Day at start of scan","unit":"1"})
     data_vars['Hour'] = (["nrec"], np.array([np.float(i.hour) for i in times]), {"long_name":"Hour at start of scan","unit":"1"})
