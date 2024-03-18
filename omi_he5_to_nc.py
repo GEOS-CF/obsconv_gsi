@@ -191,7 +191,8 @@ def _he5_to_nc(args,config,idate,hour,hour_window):
     timvec = np.concatenate(tuple(time1d),axis=0)
     times = [REFTIME+dt.timedelta(seconds=i) for i in timvec]
     # hack for tempo: set timestamp to 2021
-    offy = 8. if rtype=='TEMPO' else 0.
+    #offy = 8. if rtype=='TEMPO' else 0.
+    offy = 0.
     data_vars['Year'] = (["nrec"], np.array([np.float(i.year)+offy for i in times]), {"long_name":"Year at start of scan","unit":"1"})
     data_vars['Month'] = (["nrec"], np.array([np.float(i.month) for i in times]), {"long_name":"Month at start of scan","unit":"1"})
     data_vars['Day'] = (["nrec"], np.array([np.float(i.day) for i in times]), {"long_name":"Day at start of scan","unit":"1"})
