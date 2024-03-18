@@ -1,0 +1,28 @@
+# Configuration file to convert OMPS SO2 he5 data to netcdf using python routine omno2_he5_to_nc.py
+file_template: '/discover/nobackup/projects/gmao/geos_cf_dev/obs/OMPS_NPP_NMSO2/he5/%Y/m%m/OMPS-NPP_NMSO2-PCA-L2_v2.0_%Ym%m%d*.h5'
+retrieval_type: 'OMPS'
+
+data:
+  geo:
+    group_name: 'GEOLOCATION_DATA'
+    vars:
+      - 'Latitude'
+      - 'Longitude'
+      - 'SolarZenithAngle'
+  ancillary:
+    group_name: 'ANCILLARY_DATA'
+    vars:
+      - 'CloudPressure'
+      - 'TerrainPressure'
+  dat:
+    group_name: 'SCIENCE_DATA'
+    vars:
+      - 'AlgorithmFlag_SnowIce'
+      - 'CloudFraction'
+      - 'CloudRadianceFraction'
+      - 'ColumnAmountSO2'
+      - 'Flag_SAA'
+      - 'LayerBottomPressure'
+      - 'ScatteringWeight'
+      - 'SlantColumnAmountSO2'
+      - 'SurfaceReflectivity'

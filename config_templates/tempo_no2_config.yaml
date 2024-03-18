@@ -1,0 +1,35 @@
+# Configuration file to convert TEMPO proxy netCDF data to netcdf using python routine omno2_he5_to_nc.py
+file_template: '/discover/nobackup/projects/gmao/geos_cf_dev/obs/TEMPO_L2_V01/TEMPO_NO2_L2_V01_%Y%m%d*.nc'
+retrieval_type: 'TEMPO'
+
+data:
+  geo:
+    group_name: 'geolocation'
+    vars:
+      - 'latitude'
+      - 'longitude'
+      - 'solar_zenith_angle'
+  ancillary:
+    group_name: 'support_data'
+    vars:
+      - 'albedo'
+      - 'amf_cloud_fraction'
+      - 'amf_diagnostic_flag'
+      - 'amf_total'
+      - 'amf_troposphere'
+      - 'fitted_slant_column'
+      - 'fitted_slant_column_uncertainty'
+      - 'scattering_weights'
+      - 'surface_pressure'
+      - 'snow_ice_fraction'
+      - 'tropopause_pressure'
+      - 'terrain_height'
+      - 'gas_profile'
+  dat:
+    group_name: 'product'
+    vars:
+      - 'vertical_column_total'
+      - 'vertical_column_troposphere'
+      - 'vertical_column_total_uncertainty'
+      - 'vertical_column_troposphere_uncertainty'
+      - 'main_data_quality_flag'

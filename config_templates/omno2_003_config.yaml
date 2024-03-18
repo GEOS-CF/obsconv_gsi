@@ -1,0 +1,30 @@
+# Configuration file to convert OMNO2 he5 data to netcdf using python routine omno2_he5_to_nc.py
+file_template: '/discover/nobackup/projects/gmao/geos_cf_dev/obs/OMNO2_003/he5/%Y/m%m/OMI-Aura_L2-OMNO2_%Ym%m%d*.he5'
+
+data:
+  geo:
+    group_name: 'HDFEOS/SWATHS/ColumnAmountNO2/Geolocation Fields'
+    vars:
+      - 'Latitude'
+      - 'Longitude'
+      - 'SolarZenithAngle'
+  dat:
+    group_name: 'HDFEOS/SWATHS/ColumnAmountNO2/Data Fields'
+    vars:
+      - 'AmfStrat'
+      - 'AmfTrop'
+      - 'CloudFraction'
+      - 'CloudPressure'
+      - 'CloudRadianceFraction'
+      - 'ColumnAmountNO2'
+      - 'ColumnAmountNO2Strat'
+      - 'ColumnAmountNO2Trop'
+      - 'ScatteringWeight'
+      - 'ScatteringWtPressure'
+      - 'SlantColumnAmountNO2Destriped'
+      - 'SlantColumnAmountNO2Std'
+      - 'TerrainPressure'
+      - 'TerrainReflectivity'
+      - 'TropopausePressure'
+      - 'VcdQualityFlags'
+      - 'XTrackQualityFlags'
